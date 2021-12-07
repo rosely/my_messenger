@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, make_respo
 from flask_awscognito import AWSCognitoAuthentication
 from flask_cors import CORS
 from jwt.algorithms import RSAAlgorithm
+from flask_socketio import SocketIO, join_room, leave_room
 from flask_jwt_extended import (
     JWTManager,
     set_access_cookies,
@@ -14,7 +15,7 @@ import requests
 
 # def get_cognito_public_keys():
 #     region = 'us-east-1'
-#     pool_id = 'us-east-1_t2focHvIB'
+#     pool_id = 'us-east-1_t2focHvIB'   
 #     url = f"https://rosely-web-chat.auth.us-east-1.amazoncognito.com/{pool_id}/.well-known/jwks.json"
     
 
@@ -56,6 +57,7 @@ app.config["JWT_PUBLIC_KEY"] = RSAAlgorithm.from_jwk(get_cognito_public_keys())
 CORS(app)
 aws_auth = AWSCognitoAuthentication(app)
 jwt = JWTManager(app)
+socketio = SocketIO(app)
 
 
 
@@ -77,19 +79,56 @@ def logged_in():
     return resp
 
 
-@app.route("/secret")
+@app.route("/chat")
 def protected():
     verify_jwt_in_request(optional=True)
     if get_jwt_identity():
         print("OK!!")
-        return render_template("secret.html")
+        # username = request.args.get('username')
+        # room = request.args.get('room')
+        username = "rosely"
+        room = "friend1"
+        return render_template("chat.html", username=username, room=room)
     else:
-        print("Deu ruim!!")
         return redirect(aws_auth.get_sign_in_url())
         
+        
+        
+        
+        
+        
+        
+        
+        
+        
+
+
+@socketio.on('send_message')
+def handle_send_message_event(data):
+    app.logger.info("{} has sent message to the room {}: {}".format(data['username'],
+                                                                    data['room'],
+                                                                    data['message']))
+    socketio.emit('receive_message', data, room=data['room'])
+
+
+@socketio.on('join_room')
+def handle_join_room_event(data):
+    print("oioioioioioioioioioioioi")
+    app.logger.info("{} has joined the room {}".format(data['username'], data['room']))
+    join_room(data['room'])
+    socketio.emit('join_room_announcement', data, room=data['room'])
+
+
+@socketio.on('leave_room')
+def handle_leave_room_event(data):
+    app.logger.info("{} has left the room {}".format(data['username'], data['room']))
+    leave_room(data['room'])
+    socketio.emit('leave_room_announcement', data, room=data['room'])
+    
         
 if __name__ == "__main__":
     # Setting debug to True enables debug output. This line should be
     # removed before deploying a production app.
     app.debug = True
     app.run()
+    socketio.run(app, debug=True)
