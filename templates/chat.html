@@ -16,7 +16,8 @@
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
 <script>
-    const socket = io.connect("https://100cff30983e458e97902464ea0ffb37.vfs.cloud9.us-east-1.amazonaws.com/");
+    // const socket = io.connect("https://100cff30983e458e97902464ea0ffb37.vfs.cloud9.us-east-1.amazonaws.com/");
+    const socket = io.connect("http://127.0.0.1:5000");
 
     socket.on('connect', function () {
         console.log("oioiiii");
